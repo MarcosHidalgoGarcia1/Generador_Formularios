@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#8a9900">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Formularios CRM</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f4f4; --surface: #ffffff; --border: #d0d0d0; --border-strong: #999;
+    --text: #111111; --text-muted: #555555; --accent: #8a9900; --accent-light: #f5f7e6;
+    --accent-border: #c8d44a; --green: #6b7a00; --green-light: #f0f3d8; --green-border: #b5c230;
+    --red: #c0392b; --red-light: #fdf0ee; --red-border: #e8b4ae;
+    --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+  }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; padding: 40px 24px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header { border-bottom: 3px solid var(--accent); padding-bottom: 16px; margin-bottom: 36px; text-align: center; }
+  header h1 { font-family: var(--mono); font-size: 1.4rem; font-weight: 600; color: var(--accent); }
+  header p { margin-top: 6px; font-size: 0.88rem; color: var(--text-muted); }
+  .step { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 24px; margin-bottom: 20px; }
+  .step.hidden { display: none; }
+  .step-label { font-family: var(--mono); font-size: 0.7rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .step h2 { font-size: 1rem; font-weight: 600; margin-bottom: 14px; }
+  .step p.desc { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px; }
+  textarea { width: 100%; height: 180px; font-family: var(--mono); font-size: 0.78rem; border: 1px solid var(--border); border-radius: 3px; padding: 12px; background: #fafaf8; color: var(--text); resize: vertical; outline: none; line-height: 1.5; }
+  textarea:focus { border-color: var(--border-strong); }
+  textarea::placeholder { color: #bbb; }
+  input[type="text"], input[type="url"] { width: 100%; font-family: var(--sans); font-size: 0.88rem; border: 1px solid var(--border); border-radius: 3px; padding: 10px 12px; background: #fafaf8; color: var(--text); outline: none; transition: border-color 0.15s; margin-top: 6px; }
+  input[type="text"]:focus, input[type="url"]:focus { border-color: var(--border-strong); }
+  input::placeholder { color: #bbb; }
+  select { width: 100%; font-family: var(--sans); font-size: 0.88rem; border: 1px solid var(--border); border-radius: 3px; padding: 10px 12px; background: #fafaf8; color: var(--text); outline: none; margin-top: 6px; }
+  .field-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); font-family: var(--mono); letter-spacing: 0.5px; margin-top: 14px; display: block; }
+  .field-label:first-child { margin-top: 0; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 10px 20px; background: var(--accent); color: #fff; font-family: var(--sans); font-size: 0.88rem; font-weight: 600; border: none; border-radius: 3px; cursor: pointer; transition: background 0.15s; }
+  .btn:hover { background: var(--green); }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); }
+  .btn-secondary:hover { background: var(--bg); }
+  .btn-copy { background: var(--green); }
+  .btn-copy:hover { background: #4a5500; }
+  .btn-danger { background: var(--red-light); color: var(--red); border: 1px solid var(--red-border); }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+  /* Nombres */
+  .nombres-lista { display: flex; flex-direction: column; gap: 6px; }
+  .nombre-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 3px; background: #fafaf8; }
+  .nombre-original { font-size: 0.72rem; font-family: var(--mono); color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: 2px; padding: 2px 6px; flex-shrink: 0; }
+  .nombre-editable { font-size: 0.9rem; font-weight: 500; flex: 1; padding: 4px 6px; border: 1px dashed transparent; border-radius: 3px; background: transparent; cursor: pointer; outline: none; font-family: var(--sans); color: var(--text); transition: border-color 0.15s, background 0.15s; margin-top: 0; width: auto; }
+  .nombre-editable:hover { border-color: var(--accent-border); background: var(--accent-light); }
+  .nombre-editable:focus { border-color: var(--accent); border-style: solid; background: #fff; cursor: text; }
+  /* Obligatorios */
+  .campos-lista { display: flex; flex-direction: column; gap: 6px; }
+  .campo-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 3px; background: #fafaf8; cursor: pointer; user-select: none; transition: border-color 0.15s, background 0.15s; }
+  .campo-item:hover { border-color: var(--border-strong); background: var(--bg); }
+  .campo-item.marcado { border-color: var(--accent-border); background: var(--accent-light); }
+  .campo-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .campo-label { font-size: 0.9rem; font-weight: 500; flex: 1; }
+  .campo-id { font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: 2px; padding: 2px 6px; }
+  .campo-item.marcado .campo-id { background: var(--accent-light); border-color: var(--accent-border); color: var(--green); }
+  .already-req { font-size: 0.7rem; color: var(--text-muted); font-style: italic; }
+  /* Orden drag & drop */
+  .orden-lista { display: flex; flex-direction: column; gap: 6px; }
+  .orden-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 3px; background: #fafaf8; cursor: grab; user-select: none; transition: border-color 0.15s, background 0.15s, opacity 0.15s; }
+  .orden-item:active { cursor: grabbing; }
+  .orden-item.dragging { opacity: 0.4; border: 2px dashed var(--accent); }
+  .orden-item.drag-over { border-color: var(--accent); background: var(--accent-light); }
+  .orden-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .orden-btn { background: var(--bg); border: 1px solid var(--border); border-radius: 3px; width: 24px; height: 22px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.1s; }
+  .orden-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+  .drag-handle { color: var(--text-muted); font-size: 1.1rem; flex-shrink: 0; cursor: grab; }
+  .orden-num { font-family: var(--mono); font-size: 0.75rem; font-weight: 600; color: var(--accent); width: 22px; flex-shrink: 0; }
+  .orden-label { font-size: 0.9rem; font-weight: 500; flex: 1; }
+  .orden-id { font-family: var(--mono); font-size: 0.72rem; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: 2px; padding: 2px 6px; }
+  /* Resultado */
+  .resultado-box { background: var(--green-light); border: 1px solid var(--green-border); border-radius: 3px; padding: 16px; margin-top: 4px; }
+  .resultado-label { font-size: 0.8rem; color: var(--green); font-weight: 600; margin-bottom: 10px; font-family: var(--mono); }
+  .resultado-code { font-family: var(--mono); font-size: 0.78rem; background: #fff; border: 1px solid var(--green-border); border-radius: 3px; padding: 12px; word-break: break-all; line-height: 1.6; color: var(--text); white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+  .notice { font-size: 0.8rem; color: var(--text-muted); background: #fff8e1; border: 1px solid #f0d070; border-radius: 3px; padding: 10px 14px; margin-top: 14px; line-height: 1.5; }
+  .copied-msg { display: none; font-size: 0.8rem; color: var(--green); font-weight: 600; margin-left: 10px; }
+  .error-box { background: var(--red-light); border: 1px solid var(--red-border); border-radius: 3px; padding: 12px 16px; font-size: 0.85rem; color: var(--red); margin-top: 10px; display: none; }
+  /* Minipasos hiperenlace */
+  .minipaso-progress { display: flex; gap: 6px; margin-bottom: 20px; }
+  .minipaso-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); background: var(--bg); font-size: 0.75rem; font-weight: 600; font-family: var(--mono); display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.2s; }
+  .minipaso-dot.activo { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .minipaso-dot.hecho { border-color: var(--green); background: var(--green); color: #fff; }
+  .minipaso-linea { flex: 1; height: 2px; background: var(--border); align-self: center; border-radius: 1px; }
+  .minipaso-linea.hecha { background: var(--green); }
+  .minipaso-content { display: none; }
+  .minipaso-content.activo { display: block; }
+  .btns-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-si { background: var(--accent); color: #fff; }
+  .btn-no { background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>¡Bienvenido al generador de formularios!</h1>
+    <p>Siga los pasos correctamente.</p>
+  </header>
+
+  <!-- PASO 1 -->
+  <div class="step" id="paso1">
+    <div class="step-label">Paso 01</div>
+    <h2>Pega todo el código HTML que te genera el CRM</h2>
+    <textarea id="input-html" placeholder="Pega aquí todo el código HTML del editor del CRM..."></textarea>
+    <div class="error-box" id="error-box-1"></div>
+    <button class="btn" onclick="paso1Siguiente()">Siguiente →</button>
+  </div>
+
+  <!-- PASO 2 -->
+  <div class="step hidden" id="paso2">
+    <div class="step-label">Paso 02</div>
+    <h2>Personaliza los nombres de los campos</h2>
+    <p class="desc">Haz clic en cualquier nombre para editarlo. Si no quieres cambiarlo, déjalo como está.</p>
+    <p class="desc">⚠️ <strong>Si algún campo tiene un texto largo en varias líneas, asegúrate de cambiarle el nombre aquí por el texto completo tal y como quieres que aparezca en el formulario.</strong> Esto es importante si luego vas a añadir un hiperenlace en ese campo, ya que el texto del enlace debe coincidir exactamente con el nombre que pongas aquí.</p>
+    <div class="nombres-lista" id="nombres-lista"></div>
+    <button class="btn" onclick="paso2Siguiente()">Siguiente →</button>
+  </div>
+
+  <!-- PASO 3 -->
+  <div class="step hidden" id="paso3">
+    <div class="step-label">Paso 03</div>
+    <h2>Marca los campos que deben ser obligatorios</h2>
+    <div class="campos-lista" id="campos-lista"></div>
+    <button class="btn" onclick="paso3Siguiente()">Siguiente →</button>
+  </div>
+
+  <!-- PASO 4: hiperenlaces (minipasos) -->
+  <div class="step hidden" id="paso4">
+    <div class="step-label">Paso 04</div>
+    <h2>Hiperenlaces</h2>
+
+    <!-- Barra de progreso minipasos -->
+    <div class="minipaso-progress">
+      <div class="minipaso-dot activo" id="mp-dot-1">1</div>
+      <div class="minipaso-linea" id="mp-linea-1"></div>
+      <div class="minipaso-dot" id="mp-dot-2">2</div>
+      <div class="minipaso-linea" id="mp-linea-2"></div>
+      <div class="minipaso-dot" id="mp-dot-3">3</div>
+      <div class="minipaso-linea" id="mp-linea-3"></div>
+      <div class="minipaso-dot" id="mp-dot-4">4</div>
+    </div>
+
+    <!-- Minipaso 1: ¿quieres hiperenlace? -->
+    <div class="minipaso-content activo" id="mp1">
+      <p class="desc">¿Quieres que algún campo tenga un hiperenlace?</p>
+      <p class="desc">Por ejemplo: "Acepto la <u>política de privacidad</u>" donde las palabras subrayadas llevan a una URL.</p>
+      <div class="btns-row">
+        <button class="btn btn-si" onclick="mpResponderSi()">Sí, quiero añadir un enlace</button>
+        <button class="btn btn-no" onclick="mpResponderNo()">No, continuar sin enlace</button>
+      </div>
+    </div>
+
+    <!-- Minipaso 2: seleccionar campo -->
+    <div class="minipaso-content" id="mp2">
+      <p class="desc">¿En qué campo quieres insertar el enlace?</p>
+      <span class="field-label">CAMPO</span>
+      <select id="mp-campo"></select>
+      <button class="btn" onclick="mpIr(3)">Siguiente →</button>
+    </div>
+
+    <!-- Minipaso 3: texto del enlace -->
+    <div class="minipaso-content" id="mp3">
+      <p class="desc">Escribe las palabras exactas del nombre del campo que serán el enlace.</p>
+      <p class="desc">⚠️ <strong>Importante: las palabras que escribas aquí deben aparecer exactamente igual en el nombre del campo.</strong> Si el campo se llama "Acepto la política de privacidad" y quieres que "política de privacidad" sea el enlace, escribe exactamente: <strong>política de privacidad</strong></p>
+      <span class="field-label">TEXTO QUE TENDRÁ EL ENLACE</span>
+      <input type="text" id="mp-texto" placeholder="Ej: política de privacidad" />
+      <button class="btn" onclick="mpIr(4)">Siguiente →</button>
+    </div>
+
+    <!-- Minipaso 4: URL -->
+    <div class="minipaso-content" id="mp4">
+      <p class="desc">¿A qué URL debe llevar el enlace?</p>
+      <span class="field-label">URL</span>
+      <input type="url" id="mp-url" placeholder="Ej: https://acoge.org/politica-de-privacidad/" />
+      <div class="btns-row">
+        <button class="btn" onclick="mpFinalizar()">Añadir enlace y continuar →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 5 -->
+  <div class="step hidden" id="paso5">
+    <div class="step-label">Paso 05</div>
+    <h2>Ordena los campos arrastrándolos</h2>
+    <p class="desc">Arrastra o usa las flechas para ordenar. El formulario respetará este orden.</p>
+    <div class="orden-lista" id="orden-lista"></div>
+    <button class="btn" onclick="generarHTML()">Generar HTML →</button>
+  </div>
+
+  <!-- PASO 6 -->
+  <div class="step hidden" id="paso6">
+    <div class="step-label">Paso 06</div>
+    <h2>Copia este HTML y pégalo entero en el editor del CRM</h2>
+    <div class="resultado-box">
+      <div class="resultado-label">// HTML listo — selecciona todo en el editor del CRM y sustitúyelo por este:</div>
+      <div class="resultado-code" id="resultado-code"></div>
+    </div>
+    <button class="btn btn-copy" onclick="copiar()">Copiar HTML completo</button>
+    <span class="copied-msg" id="copied-msg">✓ Copiado</span>
+    <div class="notice"><strong>¿Cómo pegarlo?</strong> En el editor del CRM pulsa <strong>HTML</strong>, selecciona todo (Ctrl+A), y pega esto (Ctrl+V).</div>
+  </div>
+
+</div>
+<script>
+  const CAMPOS_SISTEMA = [
+    'stic_Registrations___inscripciones_lopd_c','stic_Registrations___inscrip_com_c',
+    'stic_Registrations___status','stic_Registrations___attendees',
+    'Contacts___inc_country_c','Contacts___reg_delegacion_c'
+  ];
+
+  let camposDetectados = [];
+  let htmlOriginal = '';
+  let dragSrcIndex = null;
+  let enlacesConfig = [];
+
+  function mostrar(id) {
+    document.getElementById(id).classList.remove('hidden');
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── PASO 1 ───────────────────────────────────────────────
+  function paso1Siguiente() {
+    htmlOriginal = document.getElementById('input-html').value.trim();
+    const err = document.getElementById('error-box-1');
+    err.style.display = 'none';
+    if (!htmlOriginal) {
+      err.textContent = '⚠ El campo está vacío. Pega el HTML del editor del CRM primero.';
+      err.style.display = 'block'; return;
+    }
+    const doc = new DOMParser().parseFromString(htmlOriginal, 'text/html');
+    const inputs = doc.querySelectorAll('input[id*="___"], select[id*="___"], textarea[id*="___"]');
+    const campos = [];
+    inputs.forEach(function(input) {
+      if (input.type === 'hidden') return;
+      if (CAMPOS_SISTEMA.includes(input.id)) return;
+      if (input.name === 'Submit') return;
+      let labelText = input.id;
+      const label = doc.querySelector('label[for="' + input.id + '"]');
+      if (label) labelText = label.textContent.replace(/:$/, '').trim();
+      const requiredSpan = doc.getElementById('lbl_' + input.id + '_required');
+      campos.push({ id: input.id, label: labelText, labelPersonalizado: null, yaObligatorio: requiredSpan !== null });
+    });
+    if (campos.length === 0) {
+      err.textContent = '⚠ No se encontraron campos. Asegúrate de pegar el HTML completo.';
+      err.style.display = 'block'; return;
+    }
+    camposDetectados = campos;
+    const lista = document.getElementById('nombres-lista');
+    lista.innerHTML = '';
+    camposDetectados.forEach(function(campo) {
+      const item = document.createElement('div');
+      item.className = 'nombre-item';
+      item.innerHTML = '<input class="nombre-editable" id="nombre_' + campo.id + '" type="text" value="' + campo.label + '" onfocus="this.select()" />'
+        + '<span class="nombre-original">' + campo.id + '</span>';
+      lista.appendChild(item);
+    });
+    mostrar('paso2');
+  }
+
+  // ── PASO 2 ───────────────────────────────────────────────
+  function paso2Siguiente() {
+    camposDetectados.forEach(function(campo) {
+      const input = document.getElementById('nombre_' + campo.id);
+      if (input) { const val = input.value.trim(); campo.labelPersonalizado = val !== '' ? val : campo.label; }
+    });
+    const lista = document.getElementById('campos-lista');
+    lista.innerHTML = '';
+    camposDetectados.forEach(function(campo) {
+      const nombre = campo.labelPersonalizado || campo.label;
+      const item = document.createElement('label');
+      item.className = 'campo-item' + (campo.yaObligatorio ? ' marcado' : '');
+      item.innerHTML = '<input type="checkbox" id="chk_' + campo.id + '" ' + (campo.yaObligatorio ? 'checked' : '') + ' onchange="toggleMarcado(this)">'
+        + '<span class="campo-label">' + nombre + '</span>'
+        + '<span class="campo-id">' + campo.id + '</span>'
+        + (campo.yaObligatorio ? '<span class="already-req">ya obligatorio</span>' : '');
+      lista.appendChild(item);
+    });
+    mostrar('paso3');
+  }
+
+  function toggleMarcado(cb) { cb.closest('.campo-item').classList.toggle('marcado', cb.checked); }
+
+  // ── PASO 3 ───────────────────────────────────────────────
+  function paso3Siguiente() {
+    // Resetear minipasos
+    enlacesConfig = [];
+    mpIrDot(1);
+    // Rellenar select de campos en minipaso 2
+    const sel = document.getElementById('mp-campo');
+    sel.innerHTML = '<option value="">-- Selecciona un campo --</option>';
+    camposDetectados.forEach(function(campo) {
+      const nombre = campo.labelPersonalizado || campo.label;
+      sel.innerHTML += '<option value="' + campo.id + '">' + nombre + '</option>';
+    });
+    mostrar('paso4');
+  }
+
+  // ── PASO 4: MINIPASOS HIPERENLACE ────────────────────────
+  function mpIrDot(num) {
+    for (var i = 1; i <= 4; i++) {
+      const dot = document.getElementById('mp-dot-' + i);
+      const content = document.getElementById('mp' + i);
+      if (i < num) { dot.className = 'minipaso-dot hecho'; dot.textContent = '✓'; }
+      else if (i === num) { dot.className = 'minipaso-dot activo'; dot.textContent = i; }
+      else { dot.className = 'minipaso-dot'; dot.textContent = i; }
+      if (content) content.className = 'minipaso-content' + (i === num ? ' activo' : '');
+    }
+    for (var j = 1; j <= 3; j++) {
+      const linea = document.getElementById('mp-linea-' + j);
+      linea.className = 'minipaso-linea' + (j < num ? ' hecha' : '');
+    }
+  }
+
+  function mpResponderSi() { mpIrDot(2); }
+
+  function mpResponderNo() {
+    // Sin enlace, ir directamente al paso de orden
+    construirOrden();
+    mostrar('paso5');
+  }
+
+  function mpIr(num) {
+    if (num === 3) {
+      if (!document.getElementById('mp-campo').value) { alert('Selecciona un campo primero.'); return; }
+    }
+    if (num === 4) {
+      if (!document.getElementById('mp-texto').value.trim()) { alert('Escribe el texto del enlace.'); return; }
+    }
+    mpIrDot(num);
+  }
+
+  function mpFinalizar() {
+    const campoId = document.getElementById('mp-campo').value;
+    const texto = document.getElementById('mp-texto').value.trim();
+    const url = document.getElementById('mp-url').value.trim();
+    if (!url) { alert('Escribe la URL del enlace.'); return; }
+    enlacesConfig.push({ campoId: campoId, texto: texto, url: url });
+    construirOrden();
+    mostrar('paso5');
+  }
+
+  // ── PASO 5: ORDEN ────────────────────────────────────────
+  function construirOrden() {
+    const ordenLista = document.getElementById('orden-lista');
+    ordenLista.innerHTML = '';
+    camposDetectados.forEach(function(campo, index) {
+      const nombre = campo.labelPersonalizado || campo.label;
+      const item = document.createElement('div');
+      item.className = 'orden-item';
+      item.draggable = true;
+      item.dataset.id = campo.id;
+      item.innerHTML = '<div class="orden-btns"><button class="orden-btn" onclick="moverArriba(this)">↑</button><button class="orden-btn" onclick="moverAbajo(this)">↓</button></div>'
+        + '<span class="drag-handle">⠿</span>'
+        + '<span class="orden-num">' + String(index + 1).padStart(2, '0') + '</span>'
+        + '<span class="orden-label">' + nombre + '</span>'
+        + '<span class="orden-id">' + campo.id + '</span>';
+      item.addEventListener('dragstart', onDragStart);
+      item.addEventListener('dragover', onDragOver);
+      item.addEventListener('dragleave', onDragLeave);
+      item.addEventListener('drop', onDrop);
+      item.addEventListener('dragend', onDragEnd);
+      ordenLista.appendChild(item);
+    });
+  }
+
+  function moverArriba(btn) {
+    const item = btn.closest('.orden-item');
+    const prev = item.previousElementSibling;
+    if (prev) { item.parentNode.insertBefore(item, prev); actualizarNumerosOrden(); }
+  }
+  function moverAbajo(btn) {
+    const item = btn.closest('.orden-item');
+    const next = item.nextElementSibling;
+    if (next) { item.parentNode.insertBefore(next, item); actualizarNumerosOrden(); }
+  }
+
+  // ── DRAG & DROP ──────────────────────────────────────────
+  function onDragStart(e) {
+    dragSrcIndex = [...e.currentTarget.parentNode.children].indexOf(e.currentTarget);
+    e.currentTarget.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+  function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+  function onDrop(e) {
+    e.preventDefault();
+    const lista = e.currentTarget.parentNode;
+    const items = [...lista.children];
+    const targetIndex = items.indexOf(e.currentTarget);
+    e.currentTarget.classList.remove('drag-over');
+    if (dragSrcIndex === null || dragSrcIndex === targetIndex) return;
+    const srcItem = items[dragSrcIndex];
+    if (targetIndex < dragSrcIndex) lista.insertBefore(srcItem, e.currentTarget);
+    else lista.insertBefore(srcItem, e.currentTarget.nextSibling);
+    actualizarNumerosOrden();
+  }
+  function onDragEnd(e) {
+    e.currentTarget.classList.remove('dragging');
+    document.querySelectorAll('.orden-item').forEach(function(i) { i.classList.remove('drag-over'); });
+    dragSrcIndex = null;
+  }
+  function actualizarNumerosOrden() {
+    document.querySelectorAll('.orden-item').forEach(function(item, i) {
+      item.querySelector('.orden-num').textContent = String(i + 1).padStart(2, '0');
+    });
+  }
+
+  // ── GENERAR HTML ─────────────────────────────────────────
+  function generarHTML() {
+    let html = htmlOriginal;
+
+    // 1. req_id
+    const seleccionados = [];
+    camposDetectados.forEach(function(campo) {
+      const chk = document.getElementById('chk_' + campo.id);
+      if (chk && chk.checked) seleccionados.push(campo.id);
+    });
+    const reqValor = seleccionados.join(';') + (seleccionados.length ? ';' : '');
+    html = html.replace(/(<input[^>]+id="req_id"[^>]+value=")[^"]*(")/,'$1' + reqValor + '$2');
+
+    // 2. Asteriscos
+    camposDetectados.forEach(function(campo) {
+      const chk = document.getElementById('chk_' + campo.id);
+      const selec = chk && chk.checked;
+      const spanId = 'lbl_' + campo.id + '_required';
+      const spanHtml = ' <span id="' + spanId + '" class="required">*</span>';
+      const spanRegex = new RegExp('\\s*<span[^>]+id="' + spanId + '"[^>]*>\\*<\\/span>', 'g');
+      const tiene = html.includes('id="' + spanId + '"');
+      if (selec && !tiene) html = html.replace(new RegExp('(<label[^>]+for="' + campo.id + '"[^>]*>[^<]*<\\/label>)'), '$1' + spanHtml);
+      else if (!selec && tiene) html = html.replace(spanRegex, '');
+    });
+
+    // 3. Nombres personalizados
+    camposDetectados.forEach(function(campo) {
+      if (campo.labelPersonalizado && campo.labelPersonalizado !== campo.label) {
+        html = html.replace(new RegExp('(<label[^>]+for="' + campo.id + '"[^>]*>)[^<]*(</label>)'), '$1' + campo.labelPersonalizado + ':$2');
+      }
+    });
+
+    // 4. Hiperenlaces
+    enlacesConfig.forEach(function(enlace) {
+      html = html.replace(new RegExp('(<label[^>]+for="' + enlace.campoId + '"[^>]*>)([^<]*)(</label>)'), function(match, open, labelText, close) {
+        return open + labelText.replace(enlace.texto, '<a href="' + enlace.url + '" target="_blank">' + enlace.texto + '</a>') + close;
+      });
+    });
+
+    // 5. Ocultar estado y asistentes
+    ['stic_Registrations___status', 'stic_Registrations___attendees'].forEach(function(campoId) {
+      const valor = campoId === 'stic_Registrations___status' ? 'confirmed' : '1';
+      const tmpDoc = new DOMParser().parseFromString(html, 'text/html');
+      const inputEl = tmpDoc.getElementById(campoId);
+      if (inputEl) { inputEl.value = valor; inputEl.type = 'hidden'; }
+      const tdLbl = tmpDoc.getElementById('td_lbl_' + campoId);
+      if (tdLbl) { const tr = tdLbl.closest('tr'); if (tr) tr.style.display = 'none'; }
+      const tdInput = tmpDoc.getElementById('td_' + campoId);
+      if (tdInput) { const tr = tdInput.closest('tr'); if (tr) tr.style.display = 'none'; }
+      const tableEl2 = tmpDoc.querySelector('table');
+      if (tableEl2) html = html.replace(/<table[\s\S]*?<\/table>/i, tableEl2.outerHTML);
+    });
+
+    // 6. Ocultar h3
+    html = html.replace(/<h3([^>]*)>/gi, '<h3$1 style="display:none;">');
+
+    // 7. Reordenar
+    const ordenIds = [...document.querySelectorAll('.orden-item')].map(function(i) { return i.dataset.id; });
+    const doc2 = new DOMParser().parseFromString(html, 'text/html');
+    const tableEl = doc2.querySelector('table');
+    if (tableEl) {
+      const tbodyNuevo = doc2.createElement('tbody');
+      const usados = new Set();
+      ordenIds.forEach(function(id) {
+        const tdLbl = doc2.getElementById('td_lbl_' + id);
+        const trLbl = tdLbl ? tdLbl.closest('tr') : null;
+        if (trLbl && !usados.has(trLbl)) { tbodyNuevo.appendChild(trLbl.cloneNode(true)); usados.add(trLbl); }
+        const tdInput = doc2.getElementById('td_' + id);
+        const trInput = tdInput ? tdInput.closest('tr') : null;
+        if (trInput && !usados.has(trInput)) { tbodyNuevo.appendChild(trInput.cloneNode(true)); usados.add(trInput); }
+      });
+      const tbodyEnviar = [...tableEl.querySelectorAll('tbody')].find(function(tb) { return !tb.id; });
+      if (tbodyEnviar) { const trEnviar = tbodyEnviar.querySelector('tr'); if (trEnviar) tbodyNuevo.appendChild(trEnviar.cloneNode(true)); }
+      [...tableEl.querySelectorAll('tbody')].forEach(function(tb) { tb.remove(); });
+      tableEl.appendChild(tbodyNuevo);
+      html = html.replace(/<table[\s\S]*?<\/table>/i, tableEl.outerHTML);
+    }
+
+    // 8. Estilos compactos
+    html = html.replace(/<table/, '<style>\n.tableForm tr td { padding: 0px 12px 8px 0px; vertical-align: middle; word-break: break-word; white-space: normal; }\n.column_25 { max-width: 200px; }\ntd + td { padding-left: 20px !important; }\n</style><table');
+
+    document.getElementById('resultado-code').textContent = html;
+    document.getElementById('copied-msg').style.display = 'none';
+    mostrar('paso6');
+  }
+
+  function copiar() {
+    navigator.clipboard.writeText(document.getElementById('resultado-code').textContent).then(function() {
+      const msg = document.getElementById('copied-msg');
+      msg.style.display = 'inline';
+      setTimeout(function() { msg.style.display = 'none'; }, 2500);
+    });
+  }
+</script>
+<script>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
+</script>
+</body>
+</html>
